@@ -376,6 +376,14 @@ async function processChatWithTools(currentMessages) {
   }
 }
 
+const sessionTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
+const sessionFileName = `chat_${sessionTimestamp}.json`;
+const sessionFilePath = path.join(
+  process.cwd(),
+  "chat_history",
+  sessionFileName
+);
+
 /**
  * 프로그램 전체의 대화 기록을 저장하는 배열
  * @type {Array<Object>}
@@ -391,22 +399,15 @@ let messages = [
 /**
  * 현재 대화 기록을 타임스탬프가 포함된 JSON 파일로 저장합니다.
  */
-const saveChatHistory = () => {
+const saveChatHistory = (filePath) => {
   if (messages.length <= 1) {
     console.log("\n대화 내용이 없어 저장하지 않습니다.");
     return;
   }
-
   const historyDir = path.join(process.cwd(), "chat_history");
   if (!fs.existsSync(historyDir)) {
     fs.mkdirSync(historyDir);
   }
-
-  const now = new Date();
-  const timestamp = now.toISOString().replace(/[:.]/g, "-"); // 파일명으로 쓰기 좋은 형태로 변환
-  const fileName = `chat_${timestamp}.json`;
-  const filePath = path.join(historyDir, fileName);
-
   try {
     fs.writeFileSync(filePath, JSON.stringify(messages, null, 2), "utf-8");
     console.log(`\n대화 기록이 ${filePath} 에 저장되었습니다.`);
@@ -438,7 +439,7 @@ async function main() {
 
   rl.on("SIGINT", () => {
     console.log("\nCtrl+C가 감지되었습니다. 대화 기록을 저장하고 종료합니다.");
-    saveChatHistory();
+    saveChatHistory(sessionFilePath);
     rl.close(); // readline 인터페이스를 정상적으로 닫습니다.
   });
 
@@ -446,7 +447,7 @@ async function main() {
     console.log(`\n▶️  대화를 시작합니다.`);
     rl.question("You: ", async (userQuery) => {
       if (userQuery.toLowerCase() === "exit") {
-        saveChatHistory();
+        saveChatHistory(sessionFilePath);
         rl.close();
         return;
       }
@@ -466,6 +467,8 @@ async function main() {
         // 2. 전역 messages를 반환받은 새 배열로 교체합니다. (let으로 선언했기에 가능)
         messages = updatedMessages;
 
+        // ▼▼▼ 추가: 스피너 시작 전에 readline을 일시 중지합니다.
+        rl.pause();
         // AI의 응답이 오면 스피너를 멈춥니다.
         spinner.stop();
 
@@ -473,10 +476,14 @@ async function main() {
         const finalAnswer = messages[messages.length - 1].content;
 
         console.log(`LLM 최종 답변: ${finalAnswer}`);
+
+        saveChatHistory(sessionFilePath);
       } catch (e) {
         console.error(`\n오류 발생: ${e.message}`);
+      } finally {
+        // ▼▼▼ 추가: 스피너 작업이 끝난 후 readline을 다시 시작합니다.
+        askQuestion();
       }
-      askQuestion();
     });
   }
 
