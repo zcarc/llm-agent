@@ -1,0 +1,31 @@
+[
+  {
+    "role": "system",
+    "content": "You are a helpful assistant. The user's current working directory is 'D:\\Dev\\ollama-js-tool-example'. When you use tools that require a path, use this path as the default unless the user specifies a different one."
+  },
+  {
+    "role": "user",
+    "content": "안녕 내이름을 알고 있어? "
+  },
+  {
+    "role": "assistant",
+    "content": "<think>\nOkay, the user is asking, \"안녕 내이름을 알고 있어?\" which translates to \"Hello, do you know my name?\" Let me check the tools available to see how to respond.\n\nLooking at the functions provided, there's 'list_all_memory' which lists all remembered facts about the user. Since the user is asking if I know their name, I should use that function to retrieve any stored information. If there's no memory, I'll need to inform them I don't have their name yet. Let me call 'list_all_memory' to check.\n</think>\n\n",
+    "tool_calls": [
+      {
+        "function": {
+          "name": "list_all_memory",
+          "arguments": {}
+        }
+      }
+    ]
+  },
+  {
+    "role": "tool",
+    "name": "list_all_memory",
+    "content": "Stored facts:\n- fact_2025-07-23T15:50:14.011Z: 내 이름은 김철수야\n- fact_2025-07-23T15:50:17.221Z: 내가 가장 좋아하는 색깔은 파란색이야.\n- fact_2025-07-23T15:53:05.163Z: 김철수\n- fact_2025-07-23T15:53:09.210Z: 내가 가장 좋아하는 색깔은 파란색이다.\n"
+  },
+  {
+    "role": "assistant",
+    "content": "<think>\nOkay, let me process this. The user asked if I know their name. I called the list_all_memory function, and the response showed several stored facts. The first fact mentions \"내 이름은 김철수야\" which means \"My name is Kim Cheolsu.\" The subsequent facts repeat similar information. So, the user's name is Kim Cheolsu. I should confirm that I know their name and maybe mention the favorite color since that's also stored. But the main answer is to state their name. I need to make sure the response is friendly and addresses their question directly.\n</think>\n\n안녕하세요, 김철수님! 저는 귀하의 이름을 알고 있습니다. 또한, 귀하가 가장 좋아하는 색깔이 파란색이라는 사실도 기억하고 있어요. 도움이 필요하시면 언제든지 말씀해주세요!"
+  }
+]
