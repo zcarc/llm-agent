@@ -14,7 +14,7 @@ import {
   searchMemoryJs,
 } from "./tools.js";
 import readline from "readline";
-import ora from "ora";
+import cliSpinners from "cli-spinners";
 
 // --- 설정 (Configuration) ---
 
@@ -421,20 +421,52 @@ async function main() {
   // console.log(`[시스템] 테스트할 파일 경로: ${testFilePath}`);
   // console.log(`[시스템] 테스트할 검색 디렉토리: ${testSearchFilePath}`);
 
-  // Ctrl+C 종료 이벤트 리스너 설정
-  // process.on("SIGINT", () => {
-  //   saveChatHistory();
-  //   process.exit();
-  // });
-
-  // --- 사용자 입력 추가 ---
-  console.log(
-    "\n--- 이제부터 사용자 입력을 받습니다. (종료하려면 'exit' 입력) ---"
-  );
-
-  const rl = readline.createInterface({
+  let rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
+  });
+
+  // ▼▼▼ 2. readline 프롬프트 설정 및 이벤트 리스너 사용 ▼▼▼
+  rl.setPrompt("\nYou: "); // 프롬프트 문자열 설정
+
+  rl.on("line", async (userQuery) => {
+    userQuery = userQuery.trim(); // 입력된 문자열의 앞뒤 공백 제거
+    if (userQuery.toLowerCase() === "exit") {
+      saveChatHistory(sessionFilePath);
+      rl.close();
+      return;
+    }
+
+    // 현재 사용자 입력을 messages 배열에 추가합니다.
+    messages.push({ role: "user", content: userQuery });
+
+    const spinner = cliSpinners.dots;
+    let frame = 0;
+    const spinnerInterval = setInterval(function () {
+      frame = frame + 1 === spinner.frames.length ? 0 : frame + 1;
+      process.stdout.write(`\r${spinner.frames[frame]} Thinking...`);
+    }, spinner.interval);
+
+    try {
+      // 1. processChatWithTools로부터 '업데이트된 전체 배열'을 받습니다.
+      const updatedMessages = await processChatWithTools(messages);
+
+      // 2. 전역 messages를 반환받은 새 배열로 교체합니다. (let으로 선언했기에 가능)
+      messages = updatedMessages;
+
+      clearInterval(spinnerInterval);
+
+      // 3. 최종 답변은 이제 새 배열의 마지막 요소입니다.
+      const finalAnswer = messages[messages.length - 1].content;
+
+      console.log(`\nLLM 최종 답변: ${finalAnswer}`);
+
+      saveChatHistory(sessionFilePath);
+    } catch (e) {
+      console.error(`\n오류 발생: ${e.message}`);
+    } finally {
+      rl.prompt();
+    }
   });
 
   rl.on("SIGINT", () => {
@@ -443,51 +475,11 @@ async function main() {
     rl.close(); // readline 인터페이스를 정상적으로 닫습니다.
   });
 
-  function askQuestion() {
-    console.log(`\n▶️  대화를 시작합니다.`);
-    rl.question("You: ", async (userQuery) => {
-      if (userQuery.toLowerCase() === "exit") {
-        saveChatHistory(sessionFilePath);
-        rl.close();
-        return;
-      }
-
-      // 현재 사용자 입력을 messages 배열에 추가합니다.
-      messages.push({ role: "user", content: userQuery });
-
-      const spinner = ora({
-        text: "Thinking...",
-        spinner: "dots", // 원하는 스피너 스타일의 이름을 여기에 넣습니다.
-      }).start();
-
-      try {
-        // 1. processChatWithTools로부터 '업데이트된 전체 배열'을 받습니다.
-        const updatedMessages = await processChatWithTools(messages);
-
-        // 2. 전역 messages를 반환받은 새 배열로 교체합니다. (let으로 선언했기에 가능)
-        messages = updatedMessages;
-
-        // ▼▼▼ 추가: 스피너 시작 전에 readline을 일시 중지합니다.
-        rl.pause();
-        // AI의 응답이 오면 스피너를 멈춥니다.
-        spinner.stop();
-
-        // 3. 최종 답변은 이제 새 배열의 마지막 요소입니다.
-        const finalAnswer = messages[messages.length - 1].content;
-
-        console.log(`LLM 최종 답변: ${finalAnswer}`);
-
-        saveChatHistory(sessionFilePath);
-      } catch (e) {
-        console.error(`\n오류 발생: ${e.message}`);
-      } finally {
-        // ▼▼▼ 추가: 스피너 작업이 끝난 후 readline을 다시 시작합니다.
-        askQuestion();
-      }
-    });
-  }
-
-  askQuestion();
+  // ▼▼▼ 5. 초기 프롬프트 표시 ▼▼▼
+  console.log(
+    "\n--- 이제부터 사용자 입력을 받습니다. (종료하려면 'exit' 또는 Ctrl+C 입력) ---"
+  );
+  rl.prompt(); // 프로그램 시작 시 첫 프롬프트를 표시합니다.
 
   // --- 새로운 사용자 쿼리 예시: save_memory ---
   // let userQuery17 = `내 이름은 김철수야. 이 사실을 기억해줘.`;

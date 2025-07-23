@@ -14,9 +14,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "cli-spinners": "^3.2.0",
     "glob": "^11.0.3",
-    "ollama": "^0.5.16",
-    "ora": "^8.2.0"
+    "ollama": "^0.5.16"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
