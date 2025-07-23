@@ -147,6 +147,11 @@ const OLLAMA_TOOLS_SCHEMA = [
             items: { type: "string" },
             description: "읽을 파일 경로 또는 glob 패턴 목록.",
           },
+          searchPath: {
+            type: "string",
+            description:
+              "검색을 시작할 디렉토리의 절대 경로 (기본값은 현재 작업 디렉토리).",
+          },
           exclude: {
             type: "array",
             items: { type: "string" },
@@ -342,6 +347,7 @@ async function processChatWithTools(userQuery) {
         } else if (functionName === "read_many_files") {
           toolOutput = functionToCall(
             functionArgs.paths,
+            functionArgs.searchPath,
             functionArgs.exclude,
             functionArgs.include,
             functionArgs.recursive,

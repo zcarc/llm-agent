@@ -52,6 +52,13 @@ export function listDirectoryJs(absolutePath) {
   }
 }
 
+const SAFE_WORKING_DIR = path.join(process.cwd(), "workspace");
+
+// 만약 디렉토리가 없다면 생성합니다.
+if (!fs.existsSync(SAFE_WORKING_DIR)) {
+  fs.mkdirSync(SAFE_WORKING_DIR, { recursive: true });
+}
+
 export function writeFileJs(absolutePath, content) {
   /**
    * 지정된 절대 경로에 파일 내용을 씁니다.
@@ -61,10 +68,19 @@ export function writeFileJs(absolutePath, content) {
     return `Error: Path must be absolute. Received: ${absolutePath}`;
   }
 
-  // 보안을 위해 특정 디렉토리 내에서만 쓰기를 허용하는 로직을 추가할 수 있습니다.
-  // 예: if (!absolutePath.startsWith(path.join(process.cwd(), 'safe_dir'))) { ... }
+  // --- 중요: 보안 검사 추가 ---
+  // 요청된 경로가 SAFE_WORKING_DIR 내에 있는지 확인합니다.
+  const resolvedPath = path.resolve(absolutePath);
+  if (!resolvedPath.startsWith(path.resolve(SAFE_WORKING_DIR))) {
+    return `Error: File writing is only allowed within the safe working directory: ${SAFE_WORKING_DIR}`;
+  }
 
   try {
+    // 디렉토리가 존재하지 않으면 생성해주는 것이 더 편리할 수 있습니다.
+    const dir = path.dirname(absolutePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(absolutePath, content, "utf-8");
     return `Successfully wrote to file: ${absolutePath}`;
   } catch (e) {
@@ -168,6 +184,7 @@ export function globJs(pattern, searchPath = process.cwd()) {
  */
 export function readManyFilesJs(
   paths,
+  searchPath = process.cwd(),
   exclude = [],
   include = [],
   recursive = true,
@@ -196,6 +213,7 @@ export function readManyFilesJs(
 
     // globSync 옵션 설정
     const globOptions = {
+      cwd: searchPath,
       absolute: true, // 절대 경로로 반환
       nodir: true, // 디렉토리 경로는 제외
       ignore: finalExcludes, // 제외할 패턴
