@@ -9,39 +9,39 @@ import { globSync } from "glob";
  * @param {string} absolutePath - 읽을 파일의 절대 경로.
  * @returns {string} 파일 내용 또는 에러 메시지.
  */
-export function readFileJs(absolutePath) {
+export function readFileJs({ absolute_path }) {
   // 보안을 위해 실제 서비스에서는 더 엄격한 경로 검증이 필요합니다.
-  if (!path.isAbsolute(absolutePath)) {
-    return `Error: Path must be absolute. Received: ${absolutePath}`;
+  if (!path.isAbsolute(absolute_path)) {
+    return `Error: Path must be absolute. Received: ${absolute_path}`;
   }
-  if (!fs.existsSync(absolutePath)) {
-    return `Error: File not found at ${absolutePath}`;
+  if (!fs.existsSync(absolute_path)) {
+    return `Error: File not found at ${absolute_path}`;
   }
-  if (!fs.lstatSync(absolutePath).isFile()) {
-    return `Error: Path is not a file: ${absolutePath}`;
+  if (!fs.lstatSync(absolute_path).isFile()) {
+    return `Error: Path is not a file: ${absolute_path}`;
   }
 
   try {
-    return fs.readFileSync(absolutePath, "utf-8");
+    return fs.readFileSync(absolute_path, "utf-8");
   } catch (e) {
     return `Error reading file: ${e.message}`;
   }
 }
 
 // ls 이름과 동일
-export function listDirectoryJs(absolutePath) {
+export function listDirectoryJs({ absolute_path }) {
   /**
    * 지정된 절대 경로의 디렉토리 내용을 나열합니다.
    * 이 함수는 Gemini CLI 프로젝트의 list_directory 도구의 JS/TS 버전입니다.
    */
-  if (!path.isAbsolute(absolutePath)) {
-    return `Error: Path must be absolute. Received: ${absolutePath}`;
+  if (!path.isAbsolute(absolute_path)) {
+    return `Error: Path must be absolute. Received: ${absolute_path}`;
   }
-  if (!fs.existsSync(absolutePath)) {
-    return `Error: Directory not found at ${absolutePath}`;
+  if (!fs.existsSync(absolute_path)) {
+    return `Error: Directory not found at ${absolute_path}`;
   }
-  if (!fs.lstatSync(absolutePath).isDirectory()) {
-    return `Error: Path is not a directory: ${absolutePath}`;
+  if (!fs.lstatSync(absolute_path).isDirectory()) {
+    return `Error: Path is not a directory: ${absolute_path}`;
   }
 
   try {
@@ -59,41 +59,41 @@ if (!fs.existsSync(SAFE_WORKING_DIR)) {
   fs.mkdirSync(SAFE_WORKING_DIR, { recursive: true });
 }
 
-export function writeFileJs(absolutePath, content) {
+export function writeFileJs({ absolute_path, content }) {
   /**
    * 지정된 절대 경로에 파일 내용을 씁니다.
    * 파일이 존재하면 덮어쓰고, 없으면 새로 생성합니다.
    */
-  if (!path.isAbsolute(absolutePath)) {
-    return `Error: Path must be absolute. Received: ${absolutePath}`;
+  if (!path.isAbsolute(absolute_path)) {
+    return `Error: Path must be absolute. Received: ${absolute_path}`;
   }
 
   // --- 중요: 보안 검사 추가 ---
   // 요청된 경로가 SAFE_WORKING_DIR 내에 있는지 확인합니다.
-  const resolvedPath = path.resolve(absolutePath);
+  const resolvedPath = path.resolve(absolute_path);
   if (!resolvedPath.startsWith(path.resolve(SAFE_WORKING_DIR))) {
     return `Error: File writing is only allowed within the safe working directory: ${SAFE_WORKING_DIR}`;
   }
 
   try {
     // 디렉토리가 존재하지 않으면 생성해주는 것이 더 편리할 수 있습니다.
-    const dir = path.dirname(absolutePath);
+    const dir = path.dirname(absolute_path);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(absolutePath, content, "utf-8");
-    return `Successfully wrote to file: ${absolutePath}`;
+    fs.writeFileSync(absolute_path, content, "utf-8");
+    return `Successfully wrote to file: ${absolute_path}`;
   } catch (e) {
     return `Error writing to file: ${e.message}`;
   }
 }
 
 // grep 이름과 동일
-export function searchFileContentJs(
+export function searchFileContentJs({
   pattern,
   include,
-  searchPath = process.cwd()
-) {
+  searchPath = process.cwd(),
+}) {
   /**
    * 지정된 디렉토리 내의 파일 내용에서 정규 표현식 패턴을 검색합니다.
    * @param pattern 검색할 정규 표현식 패턴.
@@ -150,7 +150,7 @@ export function searchFileContentJs(
   }
 }
 
-export function globJs(pattern, searchPath = process.cwd()) {
+export function globJs({ pattern, searchPath = process.cwd() }) {
   //  지정된 glob 패턴과 일치하는 파일들의 절대 경로 목록을 찾아서 반환합니다.
   //  @param {string} pattern 검색할 glob 패턴 (예: '**/*.js').
   //  @param {string} [searchPath] 검색을 시작할 디렉토리의 절대 경로 (기본값은 현재 작업 디렉토리).
@@ -182,14 +182,14 @@ export function globJs(pattern, searchPath = process.cwd()) {
  * @param {boolean} [recursive=true] 재귀적으로 검색할지 여부 (glob 패턴에 **가 포함된 경우).
  * @param {boolean} [useDefaultExcludes=true] 기본 제외 패턴 (node_modules, .git 등)을 사용할지 여부.
  */
-export function readManyFilesJs(
+export function readManyFilesJs({
   paths,
   searchPath = process.cwd(),
   exclude = [],
   include = [],
-  recursive = true,
-  useDefaultExcludes = true
-) {
+  // ✨ 이 부분이 핵심입니다.
+  useDefaultExcludes = true, // 기본값을 true로 명확하게 설정
+}) {
   try {
     // 모든 파일 경로를 저장할 배열
     const allFilePaths = [];
@@ -298,7 +298,7 @@ console.log(
 );
 
 // --- saveMemoryJs 함수 (수정) ---
-export function saveMemoryJs(fact) {
+export function saveMemoryJs({ fact }) {
   /**
    * 특정 사실을 LLM의 장기 기억에 저장합니다.
    * @param fact 저장할 사실 문자열.
@@ -313,7 +313,7 @@ export function saveMemoryJs(fact) {
 }
 
 // --- retrieveMemoryJs 함수 (수정) ---
-export function retrieveMemoryJs(key) {
+export function retrieveMemoryJs({ key }) {
   /**
    * 저장된 특정 사실을 키를 사용하여 조회합니다.
    * @param key 조회할 사실의 키.

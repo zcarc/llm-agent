@@ -1,4 +1,5 @@
 import ollama from "ollama";
+import * as fs from "fs";
 import * as path from "path";
 import {
   globJs,
@@ -256,33 +257,34 @@ const availableFunctions = {
  * @returns {Promise<string>} LLM의 최종 답변.
  */
 
-// processChatWithTools 함수는 이제 userQuery 대신 messages 배열을 받습니다.
-async function processChatWithTools(messages) {
-  // 여기서 messages 배열을 새로 만들지 않습니다.
+// processChatWithTools 함수는 이제 userQuery 대신 currentMessages 배열을 받습니다.
+async function processChatWithTools(currentMessages) {
+  // 1. 안전을 위해 작업할 복사본을 만듭니다.
+  let workingMessages = [...currentMessages];
 
   while (true) {
     // 1. LLM에 메시지와 사용 가능한 도구 목록을 전송
     const response = await ollama.chat({
       model: MODEL_NAME,
-      messages: messages,
+      messages: workingMessages,
       tools: OLLAMA_TOOLS_SCHEMA,
       stream: false,
     });
 
     const assistantMessage = response.message;
+    workingMessages.push(assistantMessage); // LLM 응답을 기록에 추가
+
     console.log(
       "### assistantMessage:  ",
       JSON.stringify(assistantMessage, null, 2)
     );
-
-    messages.push(assistantMessage); // LLM 응답을 기록에 추가
 
     // 2. LLM이 도구 사용을 요청했는지 확인
     if (
       !assistantMessage.tool_calls ||
       assistantMessage.tool_calls.length === 0
     ) {
-      return assistantMessage.content;
+      return workingMessages;
     }
 
     // 3. 도구 호출 실행
@@ -292,20 +294,19 @@ async function processChatWithTools(messages) {
     for (const toolCall of toolCalls) {
       const functionName = toolCall.function.name;
       const functionArgs = toolCall.function.arguments;
-
-      console.log(
-        `  [도구] '${functionName}' 실행 (인자: ${JSON.stringify(
-          functionArgs
-        )})`
-      );
-
       const functionToCall = availableFunctions[functionName];
-      if (functionToCall) {
-        let toolOutput = "";
 
-        if (functionName === "read_file" || functionName === "list_directory") {
-          toolOutput = functionToCall(functionArgs.absolute_path);
-        }
+      let toolOutput = "";
+      if (functionToCall) {
+        console.log(
+          `  [도구] '${functionName}' 실행 (인자: ${JSON.stringify(
+            functionArgs
+          )})`
+        );
+        toolOutput = functionToCall(functionArgs);
+        // if (functionName === "read_file" || functionName === "list_directory") {
+        //   toolOutput = functionToCall(functionArgs.absolute_path);
+        // }
         // else if (functionName === "write_file") {
         //   toolOutput = functionToCall(
         //     functionArgs.absolute_path,
@@ -318,52 +319,55 @@ async function processChatWithTools(messages) {
         //     functionArgs.directory
         //   );
         // }
-        else if (functionName === "search_file_content") {
-          toolOutput = functionToCall(
-            functionArgs.pattern,
-            functionArgs.include,
-            functionArgs.searchPath
-          );
-        } else if (functionName === "glob") {
-          toolOutput = functionToCall(
-            functionArgs.pattern,
-            functionArgs.searchPath
-          );
-        } else if (functionName === "read_many_files") {
-          toolOutput = functionToCall(
-            functionArgs.paths,
-            functionArgs.searchPath,
-            functionArgs.exclude,
-            functionArgs.include,
-            functionArgs.recursive,
-            functionArgs.useDefaultExcludes
-          );
-          // save_memory에 대한 인자 처리 로직
-        } else if (functionName === "save_memory") {
-          toolOutput = functionToCall(functionArgs.fact);
-          // (선택 사항) retrieve_memory에 대한 인자 처리 로직
-        } else if (functionName === "retrieve_memory") {
-          toolOutput = functionToCall(functionArgs.key);
-          // (선택 사항) list_all_memory에 대한 인자 처리 로직
-        } else if (functionName === "list_all_memory") {
-          toolOutput = functionToCall();
-        } else {
-          toolOutput = `Error: Unhandled tool arguments for ${functionName}`;
-        }
+        // else if (functionName === "search_file_content") {
+        //   toolOutput = functionToCall(
+        //     functionArgs.pattern,
+        //     functionArgs.include,
+        //     functionArgs.searchPath
+        //   );
+        // } else if (functionName === "glob") {
+        //   toolOutput = functionToCall(
+        //     functionArgs.pattern,
+        //     functionArgs.searchPath
+        //   );
+        // } else if (functionName === "read_many_files") {
+        //   toolOutput = functionToCall(
+        //     functionArgs.paths,
+        //     functionArgs.searchPath,
+        //     functionArgs.exclude,
+        //     functionArgs.include,
+        //     functionArgs.recursive,
+        //     functionArgs.useDefaultExcludes
+        //   );
+        //   // save_memory에 대한 인자 처리 로직
+        // } else if (functionName === "save_memory") {
+        //   toolOutput = functionToCall(functionArgs.fact);
+        //   // (선택 사항) retrieve_memory에 대한 인자 처리 로직
+        // } else if (functionName === "retrieve_memory") {
+        //   toolOutput = functionToCall(functionArgs.key);
+        //   // (선택 사항) list_all_memory에 대한 인자 처리 로직
+        // } else if (functionName === "list_all_memory") {
+        //   toolOutput = functionToCall();
+        // } else {
+        //   toolOutput = `Error: Unhandled tool arguments for ${functionName}`;
+        // }
 
-        // 4. (가장 중요) 도구 실행 결과를 'tool' 역할 메시지로 만들어 기록에 추가
-        messages.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          name: functionName,
-          content: toolOutput,
-        });
         console.log(
           `  [도구] 실행 완료. 결과를 LLM에 전달하여 다음 답변을 요청합니다.`
         );
       } else {
+        // ✨ 개선점 1: 알 수 없는 도구 처리
         console.error(`  [오류] 알 수 없는 도구: ${functionName}`);
+        toolOutput = `Error: Tool '${functionName}' not found.`;
       }
+
+      // 4. (가장 중요) 도구 실행 결과를 'tool' 역할 메시지로 만들어 기록에 추가
+      workingMessages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        name: functionName,
+        content: toolOutput,
+      });
     }
     // 'while' 루프의 처음으로 돌아가 도구 실행 결과가 포함된 대화 기록을 다시 LLM에 보냄
   }
@@ -373,7 +377,7 @@ async function processChatWithTools(messages) {
  * 프로그램 전체의 대화 기록을 저장하는 배열
  * @type {Array<Object>}
  */
-const messages = [
+let messages = [
   // 시스템 메시지를 추가하여 LLM에게 컨텍스트를 제공합니다.
   {
     role: "system",
@@ -442,11 +446,15 @@ async function main() {
       messages.push({ role: "user", content: userQuery });
 
       try {
-        // processChatWithTools는 현재 messages의 복사본으로 작업하는 것이 더 안전할 수 있습니다.
-        const responseMessages = await processChatWithTools([...messages]);
-        // LLM의 응답을 전역 messages에 반영
-        messages = responseMessages;
+        // 1. processChatWithTools로부터 '업데이트된 전체 배열'을 받습니다.
+        const updatedMessages = await processChatWithTools(messages);
+
+        // 2. 전역 messages를 반환받은 새 배열로 교체합니다. (let으로 선언했기에 가능)
+        messages = updatedMessages;
+
+        // 3. 최종 답변은 이제 새 배열의 마지막 요소입니다.
         const finalAnswer = messages[messages.length - 1].content;
+
         console.log(`LLM 최종 답변: ${finalAnswer}`);
       } catch (e) {
         console.error(`\n오류 발생: ${e.message}`);
