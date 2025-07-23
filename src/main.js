@@ -187,13 +187,14 @@ const OLLAMA_TOOLS_SCHEMA = [
     function: {
       name: "save_memory",
       description:
-        "특정 사실을 LLM의 장기 기억에 저장합니다. 이 정보는 LLM이 대화 세션 간에 기억하고 활용할 수 있습니다.",
+        "사용자의 이름, 선호도, 또는 대화 중에 언급된 중요한 사실과 같은 특정 정보를 나의 장기 기억에 저장합니다. 이 정보는 나중에 다시 사용될 수 있습니다.",
       parameters: {
         type: "object",
         properties: {
           fact: {
             type: "string",
-            description: "저장할 사실 문자열.",
+            description:
+              "기억할 구체적인 사실. (예: '내 이름은 김철수야', '내가 가장 좋아하는 색은 파란색이야')",
           },
         },
         required: ["fact"],
@@ -205,13 +206,15 @@ const OLLAMA_TOOLS_SCHEMA = [
     type: "function",
     function: {
       name: "retrieve_memory",
-      description: "저장된 특정 사실을 키를 사용하여 조회합니다.",
+      description:
+        "사용자의 이름이나 이전에 저장된 특정 사실에 대해 내가 무엇을 알고 있는지 나의 장기 기억 속에서 키를 사용해 찾아봅니다.",
       parameters: {
         type: "object",
         properties: {
           key: {
             type: "string",
-            description: "조회할 사실의 키.",
+            description:
+              "조회할 사실의 키. (예: 'fact_2025-07-23T15:50:14.011Z')",
           },
         },
         required: ["key"],
@@ -223,7 +226,8 @@ const OLLAMA_TOOLS_SCHEMA = [
     type: "function",
     function: {
       name: "list_all_memory",
-      description: "현재 저장된 모든 사실을 나열합니다.",
+      description:
+        "사용자에 대해 내가 기억하고 있는 모든 사실들의 목록을 나의 장기 기억 속에서 찾아서 보여줍니다. 사용자가 '내가 뭘 기억하고 있어?' 또는 '내 이름 알아?' 와 같이 불분명하게 질문할 때 유용합니다.",
       parameters: {
         type: "object",
         properties: {}, // 인자 없음
