@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import ollama from "ollama";
 import * as fs from "fs";
 import * as path from "path";
@@ -10,8 +12,6 @@ import {
   saveMemoryJs,
   listAllMemoryJs,
   searchMemoryJs,
-  testFilePath,
-  testSearchFilePath,
 } from "./tools.js";
 import readline from "readline";
 
@@ -416,8 +416,8 @@ const saveChatHistory = () => {
 
 // --- 실행 (Execution) ---
 async function main() {
-  console.log(`[시스템] 테스트할 파일 경로: ${testFilePath}`);
-  console.log(`[시스템] 테스트할 검색 디렉토리: ${testSearchFilePath}`);
+  // console.log(`[시스템] 테스트할 파일 경로: ${testFilePath}`);
+  // console.log(`[시스템] 테스트할 검색 디렉토리: ${testSearchFilePath}`);
 
   // Ctrl+C 종료 이벤트 리스너 설정
   // process.on("SIGINT", () => {
