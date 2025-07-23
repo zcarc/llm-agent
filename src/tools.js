@@ -52,41 +52,41 @@ export function listDirectoryJs({ absolute_path }) {
   }
 }
 
-const SAFE_WORKING_DIR = path.join(process.cwd(), "workspace");
+// const SAFE_WORKING_DIR = path.join(process.cwd(), "workspace");
 
-// 만약 디렉토리가 없다면 생성합니다.
-if (!fs.existsSync(SAFE_WORKING_DIR)) {
-  fs.mkdirSync(SAFE_WORKING_DIR, { recursive: true });
-}
+// // 만약 디렉토리가 없다면 생성합니다.
+// if (!fs.existsSync(SAFE_WORKING_DIR)) {
+//   fs.mkdirSync(SAFE_WORKING_DIR, { recursive: true });
+// }
 
-export function writeFileJs({ absolute_path, content }) {
-  /**
-   * 지정된 절대 경로에 파일 내용을 씁니다.
-   * 파일이 존재하면 덮어쓰고, 없으면 새로 생성합니다.
-   */
-  if (!path.isAbsolute(absolute_path)) {
-    return `Error: Path must be absolute. Received: ${absolute_path}`;
-  }
+// export function writeFileJs({ absolute_path, content }) {
+//   /**
+//    * 지정된 절대 경로에 파일 내용을 씁니다.
+//    * 파일이 존재하면 덮어쓰고, 없으면 새로 생성합니다.
+//    */
+//   if (!path.isAbsolute(absolute_path)) {
+//     return `Error: Path must be absolute. Received: ${absolute_path}`;
+//   }
 
-  // --- 중요: 보안 검사 추가 ---
-  // 요청된 경로가 SAFE_WORKING_DIR 내에 있는지 확인합니다.
-  const resolvedPath = path.resolve(absolute_path);
-  if (!resolvedPath.startsWith(path.resolve(SAFE_WORKING_DIR))) {
-    return `Error: File writing is only allowed within the safe working directory: ${SAFE_WORKING_DIR}`;
-  }
+//   // --- 중요: 보안 검사 추가 ---
+//   // 요청된 경로가 SAFE_WORKING_DIR 내에 있는지 확인합니다.
+//   const resolvedPath = path.resolve(absolute_path);
+//   if (!resolvedPath.startsWith(path.resolve(SAFE_WORKING_DIR))) {
+//     return `Error: File writing is only allowed within the safe working directory: ${SAFE_WORKING_DIR}`;
+//   }
 
-  try {
-    // 디렉토리가 존재하지 않으면 생성해주는 것이 더 편리할 수 있습니다.
-    const dir = path.dirname(absolute_path);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(absolute_path, content, "utf-8");
-    return `Successfully wrote to file: ${absolute_path}`;
-  } catch (e) {
-    return `Error writing to file: ${e.message}`;
-  }
-}
+//   try {
+//     // 디렉토리가 존재하지 않으면 생성해주는 것이 더 편리할 수 있습니다.
+//     const dir = path.dirname(absolute_path);
+//     if (!fs.existsSync(dir)) {
+//       fs.mkdirSync(dir, { recursive: true });
+//     }
+//     fs.writeFileSync(absolute_path, content, "utf-8");
+//     return `Successfully wrote to file: ${absolute_path}`;
+//   } catch (e) {
+//     return `Error writing to file: ${e.message}`;
+//   }
+// }
 
 // grep 이름과 동일
 export function searchFileContentJs({
@@ -358,40 +358,40 @@ export function searchMemoryJs({ query }) {
  * 스크립트 실행 위치에 'test_readme.md' 파일이 없으면 자동으로 생성합니다.
  * @type {string}
  */
-export const testFilePath = path.join(process.cwd(), "test_readme.md");
+// export const testFilePath = path.join(process.cwd(), "test_readme.md");
 
-// 테스트용 파일이 없으면 생성
-if (!fs.existsSync(testFilePath)) {
-  const fileContent = `# Test README for Ollama JS Client
+// // 테스트용 파일이 없으면 생성
+// if (!fs.existsSync(testFilePath)) {
+//   const fileContent = `# Test README for Ollama JS Client
 
-This is a sample file to demonstrate reading capabilities using Ollama's JS client.
-You can replace this with any other file path on your system.`;
-  fs.writeFileSync(testFilePath, fileContent, "utf-8");
-  console.log(`[시스템] 테스트용 파일 생성 완료: ${testFilePath}`);
-}
+// This is a sample file to demonstrate reading capabilities using Ollama's JS client.
+// You can replace this with any other file path on your system.`;
+//   fs.writeFileSync(testFilePath, fileContent, "utf-8");
+//   console.log(`[시스템] 테스트용 파일 생성 완료: ${testFilePath}`);
+// }
 
-// 테스트용 추가 파일 생성
-export const testSearchFilePath = path.join(process.cwd(), "test_search_dir");
-// search_file_content 테스트용
-if (!fs.existsSync(testSearchFilePath)) {
-  fs.mkdirSync(testSearchFilePath);
-  fs.writeFileSync(
-    path.join(testSearchFilePath, "file1.txt"),
-    "Hello World!\nThis is a test file.\nAnother line with World.",
-    "utf-8"
-  );
-  fs.writeFileSync(
-    path.join(testSearchFilePath, "file2.js"),
-    "function greet() {\n  console.log('Hello from JS!');\n}\n// Some other code",
-    "utf-8"
-  );
-  console.log(`테스트용 검색 디렉토리 및 파일 생성됨: ${testSearchFilePath}`);
+// // 테스트용 추가 파일 생성
+// export const testSearchFilePath = path.join(process.cwd(), "test_search_dir");
+// // search_file_content 테스트용
+// if (!fs.existsSync(testSearchFilePath)) {
+//   fs.mkdirSync(testSearchFilePath);
+//   fs.writeFileSync(
+//     path.join(testSearchFilePath, "file1.txt"),
+//     "Hello World!\nThis is a test file.\nAnother line with World.",
+//     "utf-8"
+//   );
+//   fs.writeFileSync(
+//     path.join(testSearchFilePath, "file2.js"),
+//     "function greet() {\n  console.log('Hello from JS!');\n}\n// Some other code",
+//     "utf-8"
+//   );
+//   console.log(`테스트용 검색 디렉토리 및 파일 생성됨: ${testSearchFilePath}`);
 
-  // read_many_files 테스트용
-  fs.writeFileSync(
-    path.join(testSearchFilePath, "sub_dir/sub_file.md"),
-    "# Sub Directory File\n\nThis is a file in a subdirectory.",
-    "utf-8"
-  );
-  console.log(`테스트용 검색 디렉토리 및 파일 생성됨: ${testSearchFilePath}`);
-}
+//   // read_many_files 테스트용
+//   fs.writeFileSync(
+//     path.join(testSearchFilePath, "sub_dir/sub_file.md"),
+//     "# Sub Directory File\n\nThis is a file in a subdirectory.",
+//     "utf-8"
+//   );
+//   console.log(`테스트용 검색 디렉토리 및 파일 생성됨: ${testSearchFilePath}`);
+// }
