@@ -418,10 +418,10 @@ async function main() {
   console.log(`[시스템] 테스트할 검색 디렉토리: ${testSearchFilePath}`);
 
   // Ctrl+C 종료 이벤트 리스너 설정
-  process.on("SIGINT", () => {
-    saveChatHistory();
-    process.exit();
-  });
+  // process.on("SIGINT", () => {
+  //   saveChatHistory();
+  //   process.exit();
+  // });
 
   // --- 사용자 입력 추가 ---
   console.log(
@@ -431,6 +431,12 @@ async function main() {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
+  });
+
+  rl.on("SIGINT", () => {
+    console.log("\nCtrl+C가 감지되었습니다. 대화 기록을 저장하고 종료합니다.");
+    saveChatHistory();
+    rl.close(); // readline 인터페이스를 정상적으로 닫습니다.
   });
 
   function askQuestion() {
