@@ -14,6 +14,7 @@ import {
   searchMemoryJs,
 } from "./tools.js";
 import readline from "readline";
+import ora from "ora";
 
 // --- 설정 (Configuration) ---
 
@@ -453,12 +454,20 @@ async function main() {
       // 현재 사용자 입력을 messages 배열에 추가합니다.
       messages.push({ role: "user", content: userQuery });
 
+      const spinner = ora({
+        text: "Thinking...",
+        spinner: "dots", // 원하는 스피너 스타일의 이름을 여기에 넣습니다.
+      }).start();
+
       try {
         // 1. processChatWithTools로부터 '업데이트된 전체 배열'을 받습니다.
         const updatedMessages = await processChatWithTools(messages);
 
         // 2. 전역 messages를 반환받은 새 배열로 교체합니다. (let으로 선언했기에 가능)
         messages = updatedMessages;
+
+        // AI의 응답이 오면 스피너를 멈춥니다.
+        spinner.stop();
 
         // 3. 최종 답변은 이제 새 배열의 마지막 요소입니다.
         const finalAnswer = messages[messages.length - 1].content;
