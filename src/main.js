@@ -8,8 +8,8 @@ import {
   readManyFilesJs,
   searchFileContentJs,
   saveMemoryJs,
-  retrieveMemoryJs,
   listAllMemoryJs,
+  searchMemoryJs,
   testFilePath,
   testSearchFilePath,
 } from "./tools.js";
@@ -201,23 +201,21 @@ const OLLAMA_TOOLS_SCHEMA = [
       },
     },
   },
-  // --- (선택 사항) retrieve_memory 도구 스키마 ---
   {
     type: "function",
     function: {
-      name: "retrieve_memory",
+      name: "search_memory",
       description:
-        "사용자의 이름이나 이전에 저장된 특정 사실에 대해 내가 무엇을 알고 있는지 나의 장기 기억 속에서 키를 사용해 찾아봅니다.",
+        "사용자의 이름, 선호도 등 특정 키워드를 포함하는 사실을 나의 장기 기억 속에서 검색합니다.",
       parameters: {
         type: "object",
         properties: {
-          key: {
+          query: {
             type: "string",
-            description:
-              "조회할 사실의 키. (예: 'fact_2025-07-23T15:50:14.011Z')",
+            description: "검색할 키워드 (예: '이름', '색깔', '좋아하는 것')",
           },
         },
-        required: ["key"],
+        required: ["query"],
       },
     },
   },
@@ -249,7 +247,7 @@ const availableFunctions = {
   glob: globJs,
   read_many_files: readManyFilesJs,
   save_memory: saveMemoryJs, // <-- 여기에 saveMemoryJs가 매핑됩니다.
-  retrieve_memory: retrieveMemoryJs, // <-- (선택 사항)
+  search_memory: searchMemoryJs,
   list_all_memory: listAllMemoryJs, // <-- (선택 사항)
 };
 

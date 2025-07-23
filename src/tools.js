@@ -280,17 +280,6 @@ function loadMemoryFromFile() {
   return new Map(); // 파일이 없거나 오류 발생 시 빈 Map 반환
 }
 
-// 메모리를 파일에 저장하는 함수
-function saveMemoryToFile(store) {
-  try {
-    // Map을 일반 객체로 변환하여 JSON으로 저장
-    const obj = Object.fromEntries(store);
-    fs.writeFileSync(MEMORY_FILE_PATH, JSON.stringify(obj, null, 2), "utf-8");
-  } catch (e) {
-    console.error(`Error saving memory to file: ${e.message}`);
-  }
-}
-
 // 애플리케이션 시작 시 메모리 로드
 memoryStore = loadMemoryFromFile();
 console.log(
@@ -312,16 +301,15 @@ export function saveMemoryJs({ fact }) {
   return `Fact saved to memory with key: ${key}. Total facts: ${memoryStore.size}`;
 }
 
-// --- retrieveMemoryJs 함수 (수정) ---
-export function retrieveMemoryJs({ key }) {
-  /**
-   * 저장된 특정 사실을 키를 사용하여 조회합니다.
-   * @param key 조회할 사실의 키.
-   */
-  if (memoryStore.has(key)) {
-    return `Retrieved fact for key '${key}': ${memoryStore.get(key)}`;
+// 메모리를 파일에 저장하는 함수
+function saveMemoryToFile(store) {
+  try {
+    // Map을 일반 객체로 변환하여 JSON으로 저장
+    const obj = Object.fromEntries(store);
+    fs.writeFileSync(MEMORY_FILE_PATH, JSON.stringify(obj, null, 2), "utf-8");
+  } catch (e) {
+    console.error(`Error saving memory to file: ${e.message}`);
   }
-  return `No fact found for key: ${key}`;
 }
 
 // --- listAllMemoryJs 함수 (수정) ---
@@ -337,6 +325,32 @@ export function listAllMemoryJs() {
     result += `- ${key}: ${value}\n`;
   }
   return result;
+}
+
+/**
+ * 키워드를 사용해 장기 기억의 내용(값)을 검색합니다.
+ * @param {object} args - 함수 인자 객체
+ * @param {string} args.query - 검색할 키워드 (예: "이름", "색깔")
+ * @returns {string} 키워드가 포함된 모든 사실의 목록
+ */
+export function searchMemoryJs({ query }) {
+  if (memoryStore.size === 0) {
+    return "No facts currently stored in memory.";
+  }
+
+  const results = [];
+  for (const [key, value] of memoryStore.entries()) {
+    // 값(value)에 검색어(query)가 포함되어 있는지 확인
+    if (value.includes(query)) {
+      results.push(`- ${key}: ${value}`);
+    }
+  }
+
+  if (results.length === 0) {
+    return `No facts found containing the query: '${query}'`;
+  }
+
+  return `Found matching facts:\n${results.join("\n")}`;
 }
 
 /**
