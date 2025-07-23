@@ -12,6 +12,7 @@ import {
   testFilePath,
   testSearchFilePath,
 } from "./tools.js";
+import readline from "readline";
 
 // --- 설정 (Configuration) ---
 
@@ -253,8 +254,18 @@ async function processChatWithTools(userQuery) {
   console.log(`\n▶️  새로운 대화를 시작합니다.`);
   console.log(`[사용자] ${userQuery}`);
 
+  // 현재 작업 디렉토리 경로를 가져옵니다.
+  const currentWorkingDirectory = process.cwd();
+
   // 대화 기록(history)을 관리하는 배열
-  const messages = [{ role: "user", content: userQuery }];
+  const messages = [
+    // 시스템 메시지를 추가하여 LLM에게 컨텍스트를 제공합니다.
+    {
+      role: "system",
+      content: `You are a helpful assistant. The user's current working directory is '${currentWorkingDirectory}'. When you use tools that require a path, use this path as the default unless the user specifies a different one.`,
+    },
+    { role: "user", content: userQuery },
+  ];
 
   while (true) {
     // 1. LLM에 메시지와 사용 가능한 도구 목록을 전송
@@ -372,31 +383,60 @@ async function main() {
   console.log(`[시스템] 테스트할 파일 경로: ${testFilePath}`);
   console.log(`[시스템] 테스트할 검색 디렉토리: ${testSearchFilePath}`);
 
+  // --- 사용자 입력 추가 ---
+  console.log(
+    "\n--- 이제부터 사용자 입력을 받습니다. (종료하려면 'exit' 입력) ---"
+  );
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  function askQuestion() {
+    rl.question("You: ", async (userQuery) => {
+      if (userQuery.toLowerCase() === "exit") {
+        rl.close();
+        return;
+      }
+
+      try {
+        const finalAnswer = await processChatWithTools(userQuery);
+        console.log(`LLM: ${finalAnswer}`);
+      } catch (e) {
+        console.error(`\n오류 발생: ${e.message}`);
+      }
+      askQuestion();
+    });
+  }
+
+  askQuestion();
+
   // --- 새로운 사용자 쿼리 예시: save_memory ---
-  let userQuery17 = `내 이름은 김철수야. 이 사실을 기억해줘.`;
-  console.log(`\n--- 열일곱 번째 쿼리: save_memory (이름 기억) ---`);
-  try {
-    const finalAnswer17 = await processChatWithTools(userQuery17);
-  } catch (e) {
-    console.error(`\n오류 발생: ${e.message}`);
-  }
+  // let userQuery17 = `내 이름은 김철수야. 이 사실을 기억해줘.`;
+  // console.log(`\n--- 열일곱 번째 쿼리: save_memory (이름 기억) ---`);
+  // try {
+  //   const finalAnswer17 = await processChatWithTools(userQuery17);
+  // } catch (e) {
+  //   console.error(`\n오류 발생: ${e.message}`);
+  // }
 
-  let userQuery18 = `내가 가장 좋아하는 색깔은 파란색이야. 이것도 기억해줘.`;
-  console.log(`\n--- 열여덟 번째 쿼리: save_memory (색깔 기억) ---`);
-  try {
-    const finalAnswer18 = await processChatWithTools(userQuery18);
-  } catch (e) {
-    console.error(`\n오류 발생: ${e.message}`);
-  }
+  // let userQuery18 = `내가 가장 좋아하는 색깔은 파란색이야. 이것도 기억해줘.`;
+  // console.log(`\n--- 열여덟 번째 쿼리: save_memory (색깔 기억) ---`);
+  // try {
+  //   const finalAnswer18 = await processChatWithTools(userQuery18);
+  // } catch (e) {
+  //   console.error(`\n오류 발생: ${e.message}`);
+  // }
 
-  // --- (선택 사항) 저장된 메모리 조회 예시 ---
-  let userQuery19 = `내가 기억하고 있는 모든 사실을 나열해줘.`;
-  console.log(`\n--- 열아홉 번째 쿼리: list_all_memory ---`);
-  try {
-    const finalAnswer19 = await processChatWithTools(userQuery19);
-  } catch (e) {
-    console.error(`\n오류 발생: ${e.message}`);
-  }
+  // // --- (선택 사항) 저장된 메모리 조회 예시 ---
+  // let userQuery19 = `내가 기억하고 있는 모든 사실을 나열해줘.`;
+  // console.log(`\n--- 열아홉 번째 쿼리: list_all_memory ---`);
+  // try {
+  //   const finalAnswer19 = await processChatWithTools(userQuery19);
+  // } catch (e) {
+  //   console.error(`\n오류 발생: ${e.message}`);
+  // }
 
   // --- 새로운 사용자 쿼리 예시: read_many_files ---
   // const subDirPath = path.join(testSearchFilePath, "sub_dir");
