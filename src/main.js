@@ -255,22 +255,10 @@ const availableFunctions = {
  * @param {string} userQuery - 사용자가 입력한 질문.
  * @returns {Promise<string>} LLM의 최종 답변.
  */
-async function processChatWithTools(userQuery) {
-  console.log(`\n▶️  새로운 대화를 시작합니다.`);
-  console.log(`[사용자] ${userQuery}`);
 
-  // 현재 작업 디렉토리 경로를 가져옵니다.
-  const currentWorkingDirectory = process.cwd();
-
-  // 대화 기록(history)을 관리하는 배열
-  const messages = [
-    // 시스템 메시지를 추가하여 LLM에게 컨텍스트를 제공합니다.
-    {
-      role: "system",
-      content: `You are a helpful assistant. The user's current working directory is '${currentWorkingDirectory}'. When you use tools that require a path, use this path as the default unless the user specifies a different one.`,
-    },
-    { role: "user", content: userQuery },
-  ];
+// processChatWithTools 함수는 이제 userQuery 대신 messages 배열을 받습니다.
+async function processChatWithTools(messages) {
+  // 여기서 messages 배열을 새로 만들지 않습니다.
 
   while (true) {
     // 1. LLM에 메시지와 사용 가능한 도구 목록을 전송
@@ -294,9 +282,6 @@ async function processChatWithTools(userQuery) {
       !assistantMessage.tool_calls ||
       assistantMessage.tool_calls.length === 0
     ) {
-      console.log(`\n[LLM] 최종 답변:`);
-      console.log(assistantMessage.content);
-      // 도구 호출 없이 바로 답변이 왔다면, 대화를 종료하고 결과를 반환
       return assistantMessage.content;
     }
 
@@ -384,10 +369,55 @@ async function processChatWithTools(userQuery) {
   }
 }
 
+/**
+ * 프로그램 전체의 대화 기록을 저장하는 배열
+ * @type {Array<Object>}
+ */
+const messages = [
+  // 시스템 메시지를 추가하여 LLM에게 컨텍스트를 제공합니다.
+  {
+    role: "system",
+    content: `You are a helpful assistant. The user's current working directory is '${process.cwd()}'. When you use tools that require a path, use this path as the default unless the user specifies a different one.`,
+  },
+];
+
+/**
+ * 현재 대화 기록을 타임스탬프가 포함된 JSON 파일로 저장합니다.
+ */
+const saveChatHistory = () => {
+  if (messages.length <= 1) {
+    console.log("\n대화 내용이 없어 저장하지 않습니다.");
+    return;
+  }
+
+  const historyDir = path.join(process.cwd(), "chat_history");
+  if (!fs.existsSync(historyDir)) {
+    fs.mkdirSync(historyDir);
+  }
+
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:.]/g, "-"); // 파일명으로 쓰기 좋은 형태로 변환
+  const fileName = `chat_${timestamp}.json`;
+  const filePath = path.join(historyDir, fileName);
+
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(messages, null, 2), "utf-8");
+    console.log(`\n대화 기록이 ${filePath} 에 저장되었습니다.`);
+  } catch (e) {
+    console.error(`\n대화 기록 저장 중 오류 발생: ${e.message}`);
+  }
+};
+
 // --- 실행 (Execution) ---
 async function main() {
   console.log(`[시스템] 테스트할 파일 경로: ${testFilePath}`);
   console.log(`[시스템] 테스트할 검색 디렉토리: ${testSearchFilePath}`);
+
+  // Ctrl+C 종료 이벤트 리스너 설정
+  process.on("SIGINT", () => {
+    saveChatHistory();
+    process.exit();
+  });
 
   // --- 사용자 입력 추가 ---
   console.log(
@@ -400,15 +430,24 @@ async function main() {
   });
 
   function askQuestion() {
+    console.log(`\n▶️  대화를 시작합니다.`);
     rl.question("You: ", async (userQuery) => {
       if (userQuery.toLowerCase() === "exit") {
+        saveChatHistory();
         rl.close();
         return;
       }
 
+      // 현재 사용자 입력을 messages 배열에 추가합니다.
+      messages.push({ role: "user", content: userQuery });
+
       try {
-        const finalAnswer = await processChatWithTools(userQuery);
-        console.log(`LLM: ${finalAnswer}`);
+        // processChatWithTools는 현재 messages의 복사본으로 작업하는 것이 더 안전할 수 있습니다.
+        const responseMessages = await processChatWithTools([...messages]);
+        // LLM의 응답을 전역 messages에 반영
+        messages = responseMessages;
+        const finalAnswer = messages[messages.length - 1].content;
+        console.log(`LLM 최종 답변: ${finalAnswer}`);
       } catch (e) {
         console.error(`\n오류 발생: ${e.message}`);
       }
