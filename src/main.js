@@ -19,7 +19,7 @@ import cliSpinners from "cli-spinners";
 // --- 설정 (Configuration) ---
 
 /** 사용할 Ollama 모델 이름 */
-const MODEL_NAME = "qwen3:14b";
+const MODEL_NAME = "qwen3:8b";
 
 /**
  * Ollama에 제공할 도구의 JSON 스키마입니다.
