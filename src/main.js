@@ -19,7 +19,7 @@ import cliSpinners from "cli-spinners";
 // --- 설정 (Configuration) ---
 
 /** 사용할 Ollama 모델 이름 */
-const MODEL_NAME = "qwen3";
+const MODEL_NAME = "qwen3:14b";
 
 /**
  * Ollama에 제공할 도구의 JSON 스키마입니다.
@@ -99,7 +99,7 @@ const OLLAMA_TOOLS_SCHEMA = [
           include: {
             type: "string",
             description:
-              "검색할 파일을 필터링할 glob 패턴 (예: '*.js', 'src/**').",
+              "검색할 파일을 필터링할 glob 패턴입니다. 예를 들어, '자바스크립트 파일만'은 `*.js`로, '특정 디렉토리 내의 모든 파일'은 `src/**`로 변환될 수 있습니다. 파일의 종류나 위치를 지정할 때 사용합니다.",
           },
           searchPath: {
             type: "string",
@@ -122,7 +122,8 @@ const OLLAMA_TOOLS_SCHEMA = [
         properties: {
           pattern: {
             type: "string",
-            description: "검색할 glob 패턴 (예: '**/*.js', 'docs/*.md').",
+            description:
+              "검색할 glob 패턴입니다. 예를 들어, '모든 자바스크립트 파일'은 `**/*.js`로, '문서 파일'은 `docs/*.md`로 변환될 수 있습니다. 특정 파일 확장자나 이름 패턴을 지정할 수 있습니다.",
           },
           searchPath: {
             type: "string",
@@ -392,7 +393,16 @@ let messages = [
   // 시스템 메시지를 추가하여 LLM에게 컨텍스트를 제공합니다.
   {
     role: "system",
-    content: `You are a helpful assistant. The user's current working directory is '${process.cwd()}'. When you use tools that require a path, use this path as the default unless the user specifies a different one.`,
+    content: `You are a helpful assistant. The user's current working directory is '${process.cwd()}'. When you use tools that require a path, use this path as the default unless the user specifies a different one.
+    When the user asks you to find a file, carefully consider the file type based on the conversation context. For example:
+     - If the user mentions a 'query file', you should search for files with extensions like '*.sql' or '*.query' in addition to names containing 'query'.
+     - If the user mentions a 'script file', you should consider extensions like '*.js', '*.py', or '*.sh'.
+     - If the user's request is ambiguous, ask for clarification before using a tool with a generic pattern.
+     - Always try to use the most specific glob pattern possible based on your reasoning.
+     - Since questions may also be asked in Korean, the answers provided should match the ones given in English.
+     - If your initial attempts to find a file with a tool fail, do not simply try again with a slightly different pattern. Instead, stop and ask the user for more specific information about the file name or type. For example, say: 'I could not find the file. Could you please provide a more specific name or extension?'
+     - You must answer in Korean if a question is asked in Korean.
+    `,
   },
 ];
 
@@ -601,7 +611,7 @@ async function main() {
   //   // console.log("\n--- ✅ 최종 응답 ---");
   //   // console.log(finalAnswer);
   // } catch (e) {
-  //   console.error(`\n--- ❌ 오류 발생 ---`);
+  //   console.error(`\n--- ❌ 오류 발생 ---
   //   console.error(`오류 메시지: ${e.message}`);
   //   console.error(
   //     "Ollama 서버가 실행 중인지, 모델이 정상적으로 다운로드되었는지 확인하세요."

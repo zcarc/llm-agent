@@ -45,7 +45,7 @@ export function listDirectoryJs({ absolute_path }) {
   }
 
   try {
-    const items = fs.readdirSync(absolutePath);
+    const items = fs.readdirSync(absolute_path);
     return items.join("\n");
   } catch (e) {
     return `Error listing directory: ${e.message}`;
@@ -113,10 +113,11 @@ export function searchFileContentJs({
     if (include) {
       filesToSearch = glob.sync(include, globOptions);
     } else {
-      // include 패턴이 없으면 모든 파일을 검색 (주의: 매우 느릴 수 있음)
-      // 여기서는 간단히 현재 디렉토리와 하위 디렉토리의 모든 파일을 검색하도록 구현합니다.
-      // 실제로는 더 정교한 파일 탐색 로직이 필요합니다.
-      filesToSearch = glob.sync("**/*", globOptions);
+      // include 패턴이 없으면 일반적인 문서 및 소스코드 파일 확장자만 검색하여 효율성을 높입니다.
+      filesToSearch = glob.sync(
+        "**/*.{js,ts,jsx,tsx,vue,json,md,txt,html,css,scss,less,py,sh,java,c,cpp,h,hpp,cs,go,rb,php,swift,kt,rs,yml,yaml,xml,toml,ini,cfg,conf,sql}",
+        globOptions
+      );
     }
 
     const regex = new RegExp(pattern, "gm"); // 'g'는 모든 일치 항목, 'm'은 여러 줄
@@ -139,11 +140,7 @@ export function searchFileContentJs({
       }
     }
 
-    if (results.length === 0) {
-      return `No matches found for pattern '${pattern}' in '${searchPath}'${
-        include ? ` with include '${include}'` : ""
-      }.`;
-    }
+    // 결과가 없으면 빈 문자열을, 있으면 join된 문자열을 반환하여 일관성을 유지합니다.
     return results.join("\n");
   } catch (e) {
     return `Error searching file content: ${e.message}`;
@@ -165,9 +162,7 @@ export function globJs({ pattern, searchPath = process.cwd() }) {
 
     const files = globSync(pattern, globOptions);
 
-    if (files.length === 0) {
-      return `No files found matching pattern '${pattern}' in '${searchPath}'.`;
-    }
+    // 결과가 없으면 빈 문자열을, 있으면 join된 문자열을 반환하여 일관성을 유지합니다.
     return files.join("\n");
   } catch (e) {
     return `Error performing glob search: ${e.message}`;
@@ -191,12 +186,10 @@ export function readManyFilesJs({
   useDefaultExcludes = true, // 기본값을 true로 명확하게 설정
 }) {
   try {
-    // 모든 파일 경로를 저장할 배열
-    const allFilePaths = [];
-
     // 기본 제외 패턴 설정
     const defaultExcludes = useDefaultExcludes
-      ? [
+      ?
+      [
           "node_modules/**",
           ".git/**",
           "dist/**",
@@ -222,20 +215,12 @@ export function readManyFilesJs({
     // paths와 include를 합쳐서 glob 패턴으로 사용
     const patternsToGlob = [...paths, ...include];
 
-    // 패턴별 파일 검색
-    for (const pattern of patternsToGlob) {
-      const files = glob.sync(pattern, globOptions); // globSync로 파일 목록 조회
-      for (const file of files) {
-        // 중복 파일을 제거하기 위해 배열에 추가 전에 존재 여부 확인
-        if (!allFilePaths.includes(file)) {
-          allFilePaths.push(file);
-        }
-      }
-    }
+    // 패턴 배열을 한 번에 전달하여 glob 검색을 최적화하고, 올바른 함수 이름(globSync)을 사용합니다.
+    const allFilePaths = globSync(patternsToGlob, globOptions);
 
-    // 검색된 파일이 없을 경우
+    // 검색된 파일이 없을 경우 빈 문자열을 반환합니다.
     if (allFilePaths.length === 0) {
-      return `No files found matching the provided patterns.`;
+      return "";
     }
 
     // 파일 내용을 합쳐서 반환할 문자열
@@ -362,10 +347,7 @@ export function searchMemoryJs({ query }) {
 
 // // 테스트용 파일이 없으면 생성
 // if (!fs.existsSync(testFilePath)) {
-//   const fileContent = `# Test README for Ollama JS Client
-
-// This is a sample file to demonstrate reading capabilities using Ollama's JS client.
-// You can replace this with any other file path on your system.`;
+//   const fileContent = `# Test README for Ollama JS Client\n\nThis is a sample file to demonstrate reading capabilities using Ollama's JS client.\nYou can replace this with any other file path on your system.`;
 //   fs.writeFileSync(testFilePath, fileContent, "utf-8");
 //   console.log(`[시스템] 테스트용 파일 생성 완료: ${testFilePath}`);
 // }
